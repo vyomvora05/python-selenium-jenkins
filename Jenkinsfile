@@ -1,12 +1,7 @@
 pipeline {
     agent any
 
-    environment {
-        PYTHON_PATH = 'C:\\Users\\WCLAB\\AppData\\Local\\Programs\\Python\\Python310\\python.exe'
-    }
-
     stages {
-
         stage('Checkout Source Code') {
             steps {
                 checkout scm
@@ -15,33 +10,24 @@ pipeline {
 
         stage('Set Up Environment & Dependencies') {
             steps {
-                bat '''
-                    @echo off
+                sh '''
+                    echo "Creating virtual environment..."
+                    rm -rf venv
+                    python3 -m venv venv
 
-                    echo [1/3] Creating virtual environment...
-                    if exist venv rmdir /s /q venv
-
-                    "%PYTHON_PATH%" -m venv venv
-
-                    echo [2/3] Upgrading pip...
-                    venv\\Scripts\\python.exe -m pip install --upgrade pip
-
-                    echo [3/3] Installing testing packages...
-                    venv\\Scripts\\python.exe -m pip install -r requirements.txt
+                    echo "Installing dependencies..."
+                    venv/bin/python -m pip install --upgrade pip
+                    venv/bin/python -m pip install -r requirements.txt
                 '''
             }
         }
 
         stage('Execute Selenium Tests') {
             steps {
-                bat '''
-                    @echo off
-
-                    if not exist reports mkdir reports
-
-                    echo Running Pytest Suite...
-
-                    venv\\Scripts\\python.exe -m pytest tests/ --junitxml=reports/junit-report.xml
+                sh '''
+                    mkdir -p reports
+                    echo "Running Pytest Suite..."
+                    venv/bin/python -m pytest tests/ --junitxml=reports/junit-report.xml
                 '''
             }
         }
@@ -49,7 +35,8 @@ pipeline {
 
     post {
         always {
-            junit testResults: 'reports/junit-report.xml', allowEmptyResults: true
+            junit testResults: 'reports/junit-report.xml',
+                  allowEmptyResults: true
         }
     }
 }
